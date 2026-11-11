@@ -1,5 +1,24 @@
 # 🇨🇳 hy2-split —— 自己搭的「一条隧道，两个出口」分流节点
 
+<!-- 徽章区开始 -->
+<p align="center">
+  <a href="https://github.com/aiwozhonghua81/hy2-split"><img alt="GitHub" src="https://img.shields.io/badge/GitHub-aiwozhonghua81-181717?style=flat-square&logo=github&logoColor=white"></a>
+  <img alt="最近提交" src="https://img.shields.io/github/last-commit/aiwozhonghua81/hy2-split?style=flat-square&label=%E6%9C%80%E8%BF%91%E6%8F%90%E4%BA%A4">
+  <img alt="主语言" src="https://img.shields.io/github/languages/top/aiwozhonghua81/hy2-split?style=flat-square&label=%E4%B8%BB%E8%AF%AD%E8%A8%80">
+  <img alt="星标" src="https://img.shields.io/github/stars/aiwozhonghua81/hy2-split?style=flat-square&label=%E6%98%9F%E6%A0%87">
+  <img alt="仓库体积" src="https://img.shields.io/github/repo-size/aiwozhonghua81/hy2-split?style=flat-square&label=%E4%BB%93%E5%BA%93%E4%BD%93%E7%A7%AF">
+  <img alt="许可证" src="https://img.shields.io/github/license/aiwozhonghua81/hy2-split?style=flat-square&label=%E8%AE%B8%E5%8F%AF%E8%AF%81">
+</p>
+<p align="center">
+  <img alt="中文说明" src="https://img.shields.io/badge/%E4%B8%AD%E6%96%87%E8%AF%B4%E6%98%8E-%E5%B7%B2%E5%AE%8C%E6%95%B4%E8%A6%86%E7%9B%96-brightgreen?style=flat-square">
+  <img alt="大白话" src="https://img.shields.io/badge/%E7%BB%99%E6%96%B0%E6%89%8B%E7%9C%8B-%E4%B8%8D%E7%94%A8%E6%87%82%E4%BB%A3%E7%A0%81-blue?style=flat-square">
+  <img alt="配图" src="https://img.shields.io/badge/%E9%85%8D%E5%9B%BE-%E5%AE%9E%E6%8B%8D%E6%88%AA%E5%9B%BE-ff69b4?style=flat-square">
+</p>
+<p align="center">
+  <img src="docs/banner.svg" alt="hy2-split 头图：香港直连扛大流量 + 新加坡上游走 AI 控制面，sing-box 服务端按域名" width="880">
+</p>
+<!-- 徽章区结束 -->
+
 > 一句话说明：这台香港服务器会把你的流量从一条隧道送进来，然后**自己决定**哪些流量从香港出去、哪些流量绕道新加坡出去。你在电脑上的任何软件（浏览器、AI 工具、脚本）都只看到「一个香港代理」，不用管后面发生了什么。
 
 ---
