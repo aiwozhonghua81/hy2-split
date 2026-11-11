@@ -1,0 +1,9 @@
+# 真实配置与密钥，绝不入库
+config.json
+certs/
+*.pem
+*.bak
+*.bak-*
+# 本地导出
+raw/
+.env

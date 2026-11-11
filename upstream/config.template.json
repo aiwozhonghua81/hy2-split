@@ -1,0 +1,28 @@
+{
+  "log": {
+    "level": "info",
+    "timestamp": true
+  },
+  "inbounds": [
+    {
+      "type": "mixed",
+      "tag": "mixed-in",
+      "listen": "0.0.0.0",
+      "listen_port": 1080
+    }
+  ],
+  "outbounds": [
+    {
+      "type": "socks",
+      "tag": "socks-out",
+      "server": "__UPSTREAM_SOCKS_HOST__",
+      "server_port": "__UPSTREAM_SOCKS_PORT__",
+      "username": "__UPSTREAM_SOCKS_USER__",
+      "password": "__UPSTREAM_SOCKS_PASS__"
+    }
+  ],
+  "route": {
+    "final": "socks-out",
+    "auto_detect_interface": true
+  }
+}

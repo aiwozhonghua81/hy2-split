@@ -1,0 +1,286 @@
+port: 7890
+socks-port: 7891
+allow-lan: false
+mode: rule
+log-level: info
+unified-delay: true
+ipv6: false
+
+dns:
+  enable: true
+  ipv6: false
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  fake-ip-filter:
+  - '*.lan'
+  - localhost.ptlogin2.qq.com
+  nameserver:
+  - https://223.5.5.5/dns-query
+  - https://doh.pub/dns-query
+  proxy-server-nameserver:
+  - https://223.5.5.5/dns-query
+  - https://doh.pub/dns-query
+  nameserver-policy:
+  'geosite:cn,private': []
+  'geosite:geolocation-!cn':
+  - https://8.8.4.4/dns-query
+  - https://1.1.1.1/dns-query
+  default-nameserver:
+  - 223.5.5.5
+  - 119.29.29.29
+
+tun:
+  enable: true
+  stack: mixed
+  auto-route: true
+  strict-route: true
+  auto-detect-interface: true
+  dns-hijack:
+  - any:53
+  - tcp://any:53
+  mtu: 1500
+
+# 1. Original Hysteria 2 node - unchanged
+proxies:
+  - name: "HK-Hy2-新加坡出口"
+    type: hysteria2
+    server: __HY2_SERVER__
+    port: 8443
+    password: __HY2_PASSWORD__
+    sni: bing.com
+    skip-cert-verify: true
+    up: "100"
+    down: "500"
+    # 复用 TCP 连接，减少 TLS 握手开销
+    udp: true
+
+# 2. Original proxy group - unchanged
+proxy-groups:
+  - name: "PROXY"
+    type: select
+    proxies:
+      - "HK-Hy2-新加坡出口"
+
+# 3. Rules - Gemini and Antigravity added without changing existing policies
+rules:
+  # Original server management and own domain direct rules
+  - IP-CIDR,__HY2_SERVER__/32,DIRECT,no-resolve
+  - DOMAIN-SUFFIX,maligo.top,DIRECT
+
+  # Gemini product websites / Google AI Studio
+  - DOMAIN,gemini.google.com,PROXY
+  - DOMAIN,aistudio.google.com,PROXY
+  - DOMAIN-SUFFIX,ai.google.dev,PROXY
+
+  # Antigravity App, authentication and related services
+  - DOMAIN-SUFFIX,antigravity.google,PROXY
+  - DOMAIN-SUFFIX,antigravity.google.com,PROXY
+  - DOMAIN,antigravity-unleash.goog,PROXY
+  - DOMAIN,antigravity-cli-auto-updater-974169037036.us-central1.run.app,PROXY
+  - DOMAIN,antigravity-hub-auto-updater-974169037036.us-central1.run.app,PROXY
+  - DOMAIN,accounts.google.com,PROXY
+  - DOMAIN,apis.google.com,PROXY
+
+  # Gemini API, Antigravity Cloud Code / AI Code, OAuth and Google API services
+  # Suffix rule covers current and future *.googleapis.com subdomains
+  - DOMAIN-SUFFIX,googleapis.com,PROXY
+
+  # Google static/authentication resource domains
+  - DOMAIN-SUFFIX,gstatic.com,PROXY
+  - DOMAIN-SUFFIX,googleusercontent.com,PROXY
+
+  # ChatGPT / OpenAI API, login and core resources
+  - DOMAIN-SUFFIX,chatgpt.com,PROXY
+  - DOMAIN-SUFFIX,openai.com,PROXY
+  - DOMAIN-SUFFIX,oaistatic.com,PROXY
+  - DOMAIN-SUFFIX,oaiusercontent.com,PROXY
+  - DOMAIN-SUFFIX,oaistatsig.com,PROXY
+  - DOMAIN-SUFFIX,openaimerge.com,PROXY
+  - DOMAIN,cdn.workos.com,PROXY
+  - DOMAIN,setup.workos.com,PROXY
+  - DOMAIN,forwarder.workos.com,PROXY
+  - DOMAIN,frontend-apps-multi-region.workos.com,PROXY
+  - DOMAIN,images.workoscdn.com,PROXY
+
+  # Claude / Claude API and related file resources
+  - DOMAIN-SUFFIX,claude.ai,PROXY
+  - DOMAIN-SUFFIX,claude.com,PROXY
+  - DOMAIN-SUFFIX,anthropic.com,PROXY
+  - DOMAIN,workos.imgix.net,PROXY
+  - DOMAIN-SUFFIX,claudeusercontent.com,PROXY
+  - DOMAIN-SUFFIX,claudemcpcontent.com,PROXY
+  - DOMAIN-SUFFIX,claude.app,PROXY
+
+  # OpenCode website and subdomains
+  - DOMAIN-SUFFIX,opencode.ai,PROXY
+
+  # TikTok: website, APIs, video and live resources
+  - DOMAIN-SUFFIX,tiktok.com,PROXY
+  - DOMAIN-SUFFIX,tiktokv.com,PROXY
+  - DOMAIN-SUFFIX,tiktokv.us,PROXY
+  - DOMAIN-SUFFIX,tiktokv.eu,PROXY
+  - DOMAIN-SUFFIX,tiktokcdn.com,PROXY
+  - DOMAIN-SUFFIX,tiktokcdn-us.com,PROXY
+  - DOMAIN-SUFFIX,tiktokcdn-eu.com,PROXY
+  - DOMAIN-SUFFIX,tiktokw.us,PROXY
+  - DOMAIN-SUFFIX,tiktokw.eu,PROXY
+  - DOMAIN-SUFFIX,ttwstatic.com,PROXY
+  - DOMAIN-SUFFIX,byteoversea.com,PROXY
+  - DOMAIN-SUFFIX,byteoversea.net,PROXY
+  - DOMAIN-SUFFIX,ibytedtos.com,PROXY
+  - DOMAIN-SUFFIX,ibyteimg.com,PROXY
+  - DOMAIN-SUFFIX,isnssdk.com,PROXY
+  - DOMAIN-SUFFIX,musical.ly,PROXY
+  - DOMAIN-SUFFIX,muscdn.com,PROXY
+
+  # muse.ai is now Skiv: legacy website, current platform and media CDN
+  - DOMAIN-SUFFIX,muse.ai,PROXY
+  - DOMAIN-SUFFIX,skiv.com,PROXY
+  - DOMAIN-SUFFIX,mus.ai,PROXY
+
+  # Added overseas site coverage; route via Hong Kong HY2; SG decision is on sing-box
+  # Google products and video CDN
+  - DOMAIN-SUFFIX,google.com,PROXY
+  - DOMAIN-SUFFIX,google.com.hk,PROXY
+  - DOMAIN-SUFFIX,google.co.uk,PROXY
+  - DOMAIN-SUFFIX,googlevideo.com,PROXY
+  - DOMAIN-SUFFIX,youtube.com,PROXY
+  - DOMAIN-SUFFIX,youtu.be,PROXY
+  - DOMAIN-SUFFIX,youtube-nocookie.com,PROXY
+  - DOMAIN-SUFFIX,ytimg.com,PROXY
+  - DOMAIN-SUFFIX,ggpht.com,PROXY
+  - DOMAIN-SUFFIX,gmail.com,PROXY
+  - DOMAIN-SUFFIX,googlemail.com,PROXY
+  - DOMAIN-SUFFIX,googledrive.com,PROXY
+  - DOMAIN-SUFFIX,blogspot.com,PROXY
+  - DOMAIN-SUFFIX,blogger.com,PROXY
+  - DOMAIN-SUFFIX,google.dev,PROXY
+  - DOMAIN-SUFFIX,googleadservices.com,PROXY
+  - DOMAIN-SUFFIX,firebase.google.com,PROXY
+
+  # Social networks and messaging
+  - DOMAIN-SUFFIX,facebook.com,PROXY
+  - DOMAIN-SUFFIX,facebook.net,PROXY
+  - DOMAIN-SUFFIX,fbcdn.net,PROXY
+  - DOMAIN-SUFFIX,fbsbx.com,PROXY
+  - DOMAIN-SUFFIX,instagram.com,PROXY
+  - DOMAIN-SUFFIX,cdninstagram.com,PROXY
+  - DOMAIN-SUFFIX,threads.net,PROXY
+  - DOMAIN-SUFFIX,threads.com,PROXY
+  - DOMAIN-SUFFIX,x.com,PROXY
+  - DOMAIN-SUFFIX,twitter.com,PROXY
+  - DOMAIN-SUFFIX,t.co,PROXY
+  - DOMAIN-SUFFIX,twimg.com,PROXY
+  - DOMAIN-SUFFIX,reddit.com,PROXY
+  - DOMAIN-SUFFIX,redd.it,PROXY
+  - DOMAIN-SUFFIX,redditmedia.com,PROXY
+  - DOMAIN-SUFFIX,redditstatic.com,PROXY
+  - DOMAIN-SUFFIX,pinterest.com,PROXY
+  - DOMAIN-SUFFIX,pinimg.com,PROXY
+  - DOMAIN-SUFFIX,tumblr.com,PROXY
+  - DOMAIN-SUFFIX,bsky.app,PROXY
+  - DOMAIN-SUFFIX,bsky.social,PROXY
+  - DOMAIN-SUFFIX,whatsapp.com,PROXY
+  - DOMAIN-SUFFIX,whatsapp.net,PROXY
+  - DOMAIN-SUFFIX,telegram.org,PROXY
+  - DOMAIN-SUFFIX,t.me,PROXY
+  - DOMAIN-SUFFIX,telegram.me,PROXY
+  - DOMAIN-SUFFIX,telesco.pe,PROXY
+  - DOMAIN-SUFFIX,signal.org,PROXY
+  - DOMAIN-SUFFIX,discord.com,PROXY
+  - DOMAIN-SUFFIX,discord.gg,PROXY
+  - DOMAIN-SUFFIX,discordapp.com,PROXY
+  - DOMAIN-SUFFIX,discordapp.net,PROXY
+  - DOMAIN-SUFFIX,messenger.com,PROXY
+  - DOMAIN-SUFFIX,line.me,PROXY
+  - DOMAIN-SUFFIX,line-apps.com,PROXY
+  - DOMAIN-SUFFIX,snapchat.com,PROXY
+  - DOMAIN-SUFFIX,sc-cdn.net,PROXY
+
+  # Streaming music and gaming
+  - DOMAIN-SUFFIX,netflix.com,PROXY
+  - DOMAIN-SUFFIX,netflix.net,PROXY
+  - DOMAIN-SUFFIX,nflxvideo.net,PROXY
+  - DOMAIN-SUFFIX,nflximg.net,PROXY
+  - DOMAIN-SUFFIX,nflxso.net,PROXY
+  - DOMAIN-SUFFIX,nflxext.com,PROXY
+  - DOMAIN-SUFFIX,disneyplus.com,PROXY
+  - DOMAIN-SUFFIX,disney-plus.net,PROXY
+  - DOMAIN-SUFFIX,bamgrid.com,PROXY
+  - DOMAIN-SUFFIX,spotify.com,PROXY
+  - DOMAIN-SUFFIX,scdn.co,PROXY
+  - DOMAIN-SUFFIX,spotifycdn.com,PROXY
+  - DOMAIN-SUFFIX,twitch.tv,PROXY
+  - DOMAIN-SUFFIX,ttvnw.net,PROXY
+  - DOMAIN-SUFFIX,jtvnw.net,PROXY
+  - DOMAIN-SUFFIX,vimeo.com,PROXY
+  - DOMAIN-SUFFIX,vimeocdn.com,PROXY
+  - DOMAIN-SUFFIX,dailymotion.com,PROXY
+  - DOMAIN-SUFFIX,dmcdn.net,PROXY
+  - DOMAIN-SUFFIX,soundcloud.com,PROXY
+  - DOMAIN-SUFFIX,sndcdn.com,PROXY
+  - DOMAIN-SUFFIX,steamcommunity.com,PROXY
+  - DOMAIN-SUFFIX,steamstatic.com,PROXY
+  - DOMAIN-SUFFIX,hulu.com,PROXY
+  - DOMAIN-SUFFIX,huluim.com,PROXY
+  - DOMAIN-SUFFIX,pandora.com,PROXY
+  - DOMAIN-SUFFIX,youtube.tv,PROXY
+
+  # News reference and forums
+  - DOMAIN-SUFFIX,wikipedia.org,PROXY
+  - DOMAIN-SUFFIX,wikimedia.org,PROXY
+  - DOMAIN-SUFFIX,wikimediafoundation.org,PROXY
+  - DOMAIN-SUFFIX,nytimes.com,PROXY
+  - DOMAIN-SUFFIX,wsj.com,PROXY
+  - DOMAIN-SUFFIX,bbc.com,PROXY
+  - DOMAIN-SUFFIX,bbc.co.uk,PROXY
+  - DOMAIN-SUFFIX,reuters.com,PROXY
+  - DOMAIN-SUFFIX,bloomberg.com,PROXY
+  - DOMAIN-SUFFIX,theguardian.com,PROXY
+  - DOMAIN-SUFFIX,washingtonpost.com,PROXY
+  - DOMAIN-SUFFIX,medium.com,PROXY
+  - DOMAIN-SUFFIX,archive.org,PROXY
+  - DOMAIN-SUFFIX,archive-it.org,PROXY
+  - DOMAIN-SUFFIX,imgur.com,PROXY
+  - DOMAIN-SUFFIX,fandom.com,PROXY
+
+  # Development and cloud
+  - DOMAIN-SUFFIX,github.com,PROXY
+  - DOMAIN-SUFFIX,githubusercontent.com,PROXY
+  - DOMAIN-SUFFIX,githubassets.com,PROXY
+  - DOMAIN-SUFFIX,github.io,PROXY
+  - DOMAIN-SUFFIX,raw.githubusercontent.com,PROXY
+  - DOMAIN-SUFFIX,githubcopilot.com,PROXY
+  - DOMAIN-SUFFIX,copilot.microsoft.com,PROXY
+  - DOMAIN-SUFFIX,dropbox.com,PROXY
+  - DOMAIN-SUFFIX,dropboxstatic.com,PROXY
+  - DOMAIN-SUFFIX,dropboxusercontent.com,PROXY
+  - DOMAIN-SUFFIX,notion.so,PROXY
+  - DOMAIN-SUFFIX,notion.site,PROXY
+  - DOMAIN-SUFFIX,wordpress.com,PROXY
+  - DOMAIN-SUFFIX,wp.com,PROXY
+  - DOMAIN-SUFFIX,workers.dev,PROXY
+  - DOMAIN-SUFFIX,pages.dev,PROXY
+  - DOMAIN-SUFFIX,vercel.app,PROXY
+  - DOMAIN-SUFFIX,vercel.com,PROXY
+  - DOMAIN-SUFFIX,appspot.com,PROXY
+  - DOMAIN-SUFFIX,wixsite.com,PROXY
+  - DOMAIN-SUFFIX,firebaseapp.com,PROXY
+  - DOMAIN-SUFFIX,replit.com,PROXY
+  - DOMAIN-SUFFIX,huggingface.co,PROXY
+  - DOMAIN-SUFFIX,hf.co,PROXY
+  - DOMAIN-SUFFIX,cursor.com,PROXY
+  - DOMAIN-SUFFIX,windsurf.com,PROXY
+  - DOMAIN-SUFFIX,codeium.com,PROXY
+
+  # Optional international AI platforms from the earlier comparison
+  - DOMAIN-SUFFIX,grok.com,PROXY
+  - DOMAIN-SUFFIX,x.ai,PROXY
+  - DOMAIN-SUFFIX,perplexity.ai,PROXY
+  - DOMAIN-SUFFIX,poe.com,PROXY
+  - DOMAIN-SUFFIX,openrouter.ai,PROXY
+
+  # Original LAN / mainland China / fallback policies
+  - GEOIP,LAN,DIRECT,no-resolve
+  - GEOIP,CN,DIRECT
+  - MATCH,PROXY

@@ -1,0 +1,12 @@
+[Unit]
+Description=Network tuning for QUIC/Hysteria2 (RPS, XPS, offload, ring buffer)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/nic-tune.sh
+
+[Install]
+WantedBy=multi-user.target

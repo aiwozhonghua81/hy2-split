@@ -1,0 +1,28 @@
+name: socks5-client
+services:
+  socks5-client:
+    sysctls:
+      - net.ipv6.conf.all.disable_ipv6=1
+    image: mcode-security/socks5-client:20261031-1635
+    container_name: socks5-client
+    restart: unless-stopped
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
+    command: run -c /etc/sing-box/config.json
+    volumes:
+      - ./config.json:/etc/sing-box/config.json:ro
+    ports:
+      - "127.0.0.1:1080:1080/tcp"
+      - "127.0.0.1:1080:1080/udp"
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 1080 || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
