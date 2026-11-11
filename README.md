@@ -20,6 +20,7 @@
 - [十二、常见问题排查](#十二常见问题排查)
 - [十三、备份与回滚](#十三备份与回滚)
 - [十四、修改配置的正确姿势](#十四修改配置的正确姿势)
+- [十五、把服务器的分流域名同步到本机 Clash](#十五把服务器的分流域名同步到本机-clash)
 
 ---
 
@@ -144,7 +145,11 @@ hy2-split/
 │   └── profile.yaml                 Clash Verge（mihomo 内核）配置
 │
 ├── scripts/
-│   ├── traffic-stat.sh              统计流量到底走了哪边
+│   ├── traffic-stat.sh              服务器侧：统计流量走了哪边
+│   ├── sync-domains.py              从服务器配置生成客户端规则块（命令行）
+│   ├── sync_domains.py              同上，可被其他脚本 import 的模块版
+│   ├── sync-to-clash.py             一键：服务器域名 → 本地 Clash → 热重载
+│   ├── mihomo_pipe.py               Windows 命名管道版 mihomo API 客户端
 │   └── render-client.sh             把客户端配置里的占位符填成真值
 │
 ├── install.sh                       一键部署脚本
@@ -449,6 +454,121 @@ git push
 ```
 
 这样下次重新部署用的就是最新版，不用再回忆当时改了什么。
+
+---
+
+## 十五、把服务器的分流域名同步到本机 Clash
+
+### 为什么需要这个
+
+服务器上的规则是**最终裁决**（它决定这个域名最终从香港还是新加坡出去）。
+但本机 Clash Verge 也有自己一套规则。如果两边不同步，会出现两类问题：
+
+- **漏匹配**：服务器新增了一个域名，本机没这条规则，流量走 `MATCH,PROXY` 兜底——
+  看起来能用，但实际上是碰巧对
+- **多走隧道**：本机把国内域名也丢进隧道，白白消耗香港服务器的带宽
+
+同步之后，本机规则和服务器规则**同源**，改一边另一边跟着变。
+
+### 映射原则
+
+服务器只有两种出站：`direct`（香港）和 `socks-upstream`（新加坡）。
+在客户端这一层，区别不是「走哪个出口」，而是「**要不要进隧道**」：
+
+| 服务器的判断 | 客户端怎么做 | 为什么 |
+|---|---|---|
+| 走新加坡 | `PROXY`（进隧道） | 让服务器转新加坡 |
+| 走香港 | `PROXY`（进隧道） | 由服务器用香港 IP 出去 |
+| 纯国内域名 | `DIRECT`（本地直连） | 省隧道带宽，国内访问本来就快 |
+
+### 一条命令搞定
+
+```bash
+cd hy2-split
+HK_PASS='你的服务器密码' python3 scripts/sync-to-clash.py
+```
+
+脚本会依次做 5 件事：
+
+1. 通过 SSH 拉取服务器的 `/opt/socks5-server/config.json`
+2. 解析出 498 条香港域名 + 8 条新加坡域名，生成 506 条 mihomo 规则
+3. 写进本机 profile 文件（`profiles/Lp40mQdLETnX.yaml`），**带起止标记，可重复执行**
+4. 同步写进运行时配置 `clash-verge.yaml`
+5. 通过命名管道让 mihomo **热重载**——不用重启客户端，连接不断
+
+执行前会自动备份原文件（`*.bak-sync-时间戳`）。
+
+### 国内域名是怎么判定的
+
+靠 `scripts/sync_domains.py` 里的一份**显式清单**（`CN_DOMAINS`，58 条），
+包含字节国内系（`snssdk.com`、`pstatp.com`、`byteimg.com`、`douyin.com`、`toutiao.com`…）
+和常见国内站（`bilibili.com`、`iqiyi.com`、`baidu.com`、`youku.com`…）。
+
+**为什么不用 geosite 自动判断**：geosite 数据库会随版本变动，同一份代码在不同机器上
+判定结果可能不一样。显式清单更可控，改起来也更直观。
+
+**国际字节系要特别小心**：`isnssdk.com`、`ipstatp.com`、`ibyteimg.com`、`byteoversea.com`
+名字看着像国内，实际是 TikTok 海外体系，必须走隧道，不能进国内直连清单。
+
+### 端到端实测结果
+
+```
+https://www.tiktok.com/          http=200  t=0.50s
+https://api.openai.com/v1/models http=401  t=0.61s   ← 401 是正常的（没带 API Key）
+https://www.youtube.com/          http=200  t=0.39s
+https://image.baidu.com/          http=200  t=0.26s
+https://www.bilibili.com/         http=200  t=0.14s
+https://www.douyin.com/           http=200  t=0.18s
+```
+
+从服务端连接表反查：
+
+- `image.baidu.com` / `www.bilibili.com` / `www.douyin.com` **在服务端完全查不到**
+  → 说明这三个根本没进隧道，是本机直连的，符合预期
+- `chatgpt.com`、`ws.chatgpt.com` 在服务端 `socks-upstream` 链路
+  → 进了隧道并被转到新加坡，正确
+- `p19-common-sign.tiktokcdn.com`、`ssl.gstatic.com` 在服务端 `direct` 链路
+  → 进了隧道并从香港出去，正确
+
+运行时规则总数 **692 条**（原有 186 条 + 同步块 506 条）。
+
+### ⚠️ 两个踩过的坑（写脚本时踩的，别再踩）
+
+**坑 1：缩进不一致导致重复插入两块**
+
+profile 文件里规则是缩进两格的（因为在 `rules:` 下面），运行时 `clash-verge.yaml`
+是顶层列表，**不缩进**。两个文件的标记文字一样但缩进不同，如果按「带缩进」去匹配，
+第二次执行时旧块没被识别到，就会**插两块**，规则数翻倍。
+
+解法：清理旧块时**忽略缩进**，并且块必须自带结束标记。
+
+**坑 2：块没结束标记会吞掉后面的锚点**
+
+清理旧块是「从起始标记一直删到结束标记」。如果块本身没有结束标记，
+就会把后面所有内容（包括插入锚点）一起删掉，下次执行直接报「找不到插入锚点」。
+
+解法：生成块时**自动补上结束标记**。
+
+### 配套工具
+
+`scripts/mihomo_pipe.py` 是一个 Windows 命名管道版 mihomo API 客户端，
+用来做「查规则命中情况」「看当前连接」「热重载」这些事：
+
+```bash
+python3 scripts/mihomo_pipe.py /rules              # 看全部规则和命中次数
+python3 scripts/mihomo_pipe.py /connections        # 看当前所有连接走的哪条链路
+python3 scripts/mihomo_pipe.py --reload <配置.yaml>  # 热重载
+```
+
+**为什么需要它**：Clash Verge 的 mihomo 不是用普通 HTTP 端口暴露 API 的，
+而是走 Windows **命名管道**（`\\.\pipe\verge-mihomo-production-xxx`）。
+`curl` 和 `requests` 都连不上，必须直接读写管道。
+
+还有两个细节：
+- 配置文件里记录的管道名（`verge-mihomo-sidecar-release-xxx`）**和实际运行的
+  （`verge-mihomo-production-xxx`）可能不一致**，要以 `Get-ChildItem \\.\pipe\` 扫出来为准
+- 用 `PUT /configs?force=true` 重载时，**不能传文件路径**（服务端限制只允许
+  `ProgramData\clash-verge-service\...\runtime` 下的路径），要传 `{"payload": "<文件内容>"}`
 
 ---
 
