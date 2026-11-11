@@ -7,3 +7,6 @@ certs/
 # 本地导出
 raw/
 .env
+
+# 渲染出来的真实客户端配置
+client/profile.local.yaml
